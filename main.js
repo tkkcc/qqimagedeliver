@@ -7,19 +7,21 @@ const qs = require('querystring')
 const default_opt = {
   port: 49875,
   maxsize: 1000000,
+  platform: 1,
 }
 const opt = require('minimist')(process.argv.slice(2))
 if (opt.help || !opt.username || !opt.password) {
-  const exe = "qqimagedeliver"
-  console.log(`${exe} [--username ''] [--password ''] [--host ''][--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}]
+  const exe = 'qqimagedeliver'
+  console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}]
 ${exe} --username 789012 --password 5e6147aa5f # crypto your password by 'echo -n realpassword|md5sum'`)
   process.exit(1)
 }
 opt.port = parseInt(opt.port || default_opt.port)
 opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
+opt.platform = parseInt(opt.platform || default_opt.platform)
 
 const online = () => {
-  const bot = createClient(opt['username'])
+  const bot = createClient(opt['username'], { platform: opt.platform })
   bot.on('system.login.slider', () => {
     process.stdin.once('data', (input) => {
       bot.sliderLogin(input)
@@ -30,6 +32,9 @@ const online = () => {
     process.stdin.once('data', () => {
       bot.login()
     })
+  })
+  bot.on('system.offline', () => {
+    process.exit(1)
   })
   bot.login(opt['password'])
   return new Promise((resolve) => {

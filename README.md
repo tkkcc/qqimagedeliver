@@ -12,6 +12,11 @@
 npm i -g qqimagedeliver
 qqimagedeliver --help
 qqimagedeliver --username 789012 --password 5e6147aa5f # QQ机器人的帐号与密码（md5加密结果）
+
+# 下线重登
+npm i -g pm2
+pm2 start qqimagedeliver -- --username 789012 --password 5e6147aa5f
+pm2 log
 ```
 
 ## 辅助发送图像与用户QQ给服务端

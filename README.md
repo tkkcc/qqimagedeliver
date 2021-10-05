@@ -6,6 +6,14 @@
 - 运行流程：辅助运行结束后截屏 -> 辅助发送图像与用户QQ给服务端 -> 服务端QQ机器人发送图像给用户QQ
 
 
+
+
+
+https://user-images.githubusercontent.com/17373509/135971168-62f45b77-c83c-4e85-a8d3-bc9e0804d530.mp4
+
+
+
+
 ## 安装服务端
 
 ```sh

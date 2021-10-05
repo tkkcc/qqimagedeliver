@@ -1,18 +1,13 @@
 # QQ图像分发
 
-基于QQ机器人的面向手游辅助脚本的推送服务。
+面向手游辅助脚本的QQ机器人推送服务
 
 - 前期准备：用户在辅助界面中输入用户QQ，用户点击按钮添加QQ机器人为好友。
 - 运行流程：辅助运行结束后截屏 -> 辅助发送图像与用户QQ给服务端 -> 服务端QQ机器人发送图像给用户QQ
 
-
-
-
-
 https://user-images.githubusercontent.com/17373509/135971168-62f45b77-c83c-4e85-a8d3-bc9e0804d530.mp4
 
-
-
+[明日方舟速通](https://github.com/tkkcc/arknights)
 
 ## 安装服务端
 
@@ -45,6 +40,10 @@ captureqqimagedeliver = function(info, to)
 end
 captureqqimagedeliver("剩余理智27", 2367739198)
 ```
+
+## 问题
+
+- [异地登录后几天内自动下线](https://github.com/takayama-lily/oicq/issues/212)，需配合pm2等工具使用。
 
 ## 其它推送方式
 

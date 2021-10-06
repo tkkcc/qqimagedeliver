@@ -20,7 +20,7 @@ opt.port = parseInt(opt.port || default_opt.port)
 opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
 opt.platform = parseInt(opt.platform || default_opt.platform)
 
-const online = () => {
+const newbot = () => {
   const bot = createClient(opt['username'], { platform: opt.platform })
   bot.on('system.login.slider', () => {
     process.stdin.once('data', (input) => {
@@ -34,17 +34,22 @@ const online = () => {
     })
   })
   bot.on('system.offline', () => {
-    process.exit(1)
+    // bot.login(opt['password'])
   })
+  return bot
+}
+const online = async (bot) => {
+  if (bot.isOnline()) return bot
   bot.login(opt['password'])
   return new Promise((resolve) => {
     bot.on('system.online', () => resolve(bot))
   })
 }
+
 const serve = (bot) => {
   const server = http.createServer(async (req, res) => {
-    if (req.method != 'POST') return
     res.end()
+    if (req.method != 'POST') return
     let body = ''
     req.on('data', (data) => {
       body += data
@@ -60,9 +65,14 @@ const serve = (bot) => {
         { type: 'text', data: { text: body['info'] } },
         { type: 'image', data: { file: 'base64://' + body['image'] } },
       ]
-      await bot.sendPrivateMsg(body['to'], message)
+      for (let i = 0; i < 5; ++i) {
+        await online(bot)
+        if ((await bot.sendPrivateMsg(body['to'], message)).retcode === 0) break
+        await new Promise((r) => setTimeout(r, 10000))
+      }
     })
   })
   server.listen({ port: opt['port'], host: opt['host'] })
 }
-online().then(serve)
+
+serve(newbot())

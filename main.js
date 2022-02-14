@@ -7,19 +7,19 @@ const qs = require('querystring')
 const default_opt = {
   port: 49875,
   maxsize: 10000000, // 10M
-  maxretry: 2,
+  maxtry: 1,
   platform: 1,
 }
 const opt = require('minimist')(process.argv.slice(2))
 if (opt.help || !opt.username || !opt.password) {
   const exe = 'qqimagedeliver'
-  console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] [--maxretry ${default_opt.maxretry}]
+  console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] [--maxtry ${default_opt.maxtry}]
 ${exe} --username 789012 --password 5e6147aa5f # crypto your password by 'echo -n realpassword|md5sum'`)
   process.exit(1)
 }
 opt.port = parseInt(opt.port || default_opt.port)
 opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
-opt.maxretry = parseInt(opt.maxretry || default_opt.maxretry)
+opt.maxtry = parseInt(opt.maxtry || default_opt.maxtry)
 opt.platform = parseInt(opt.platform || default_opt.platform)
 
 const newbot = () => {
@@ -62,7 +62,7 @@ const serve = (bot) => {
     })
     req.on('end', async () => {
       body = qs.parse(body)
-      if (body['to']<5 || (!body['info'] && !body['image'])) return
+      if (body['to'] < 5 || (!body['info'] && !body['image'])) return
       const message = []
       if (body['info']) {
         message.push(body['info'])
@@ -70,11 +70,11 @@ const serve = (bot) => {
       if (body['image']) {
         message.push(segment.image('base64://' + body['image']))
       }
-      for (let i = 0; i < opt['maxretry']; ++i) {
+      for (let i = 0; i < opt['maxtry']; ++i) {
         try {
           await online(bot)
-          if ((await bot.sendPrivateMsg(body['to'], message)).retcode === 0)
-            break
+          await bot.sendPrivateMsg(body['to'], message)
+          break
         } catch (e) {
           console.log(e, body['to'])
         }

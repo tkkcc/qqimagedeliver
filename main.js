@@ -62,8 +62,11 @@ const serve = (bot) => {
     })
     req.on('end', async () => {
       body = qs.parse(body)
-      if (!body['to'] || (!body['info'] && !body['image'])) return
-      const message = [body['info']]
+      if (body['to']<5 || (!body['info'] && !body['image'])) return
+      const message = []
+      if (body['info']) {
+        message.push(body['info'])
+      }
       if (body['image']) {
         message.push(segment.image('base64://' + body['image']))
       }

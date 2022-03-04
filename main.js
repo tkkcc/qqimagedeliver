@@ -3,17 +3,21 @@ const { createClient, segment } = require('oicq')
 const path = require('path')
 const http = require('http')
 const qs = require('querystring')
+const sharp = require('sharp')
 
 const default_opt = {
   port: 49875,
   maxsize: 10000000, // 10M
   maxtry: 1,
   platform: 1,
+  resizeh: 0,
 }
 const opt = require('minimist')(process.argv.slice(2))
 if (opt.help || !opt.username || !opt.password) {
   const exe = 'qqimagedeliver'
-  console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] [--maxtry ${default_opt.maxtry}]
+  console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] \
+[--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] \
+[--maxtry ${default_opt.maxtry}] [--resizeh ${default_opt.resizeh}]
 ${exe} --username 789012 --password 5e6147aa5f # crypto your password by 'echo -n realpassword|md5sum'`)
   process.exit(1)
 }
@@ -21,6 +25,22 @@ opt.port = parseInt(opt.port || default_opt.port)
 opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
 opt.maxtry = parseInt(opt.maxtry || default_opt.maxtry)
 opt.platform = parseInt(opt.platform || default_opt.platform)
+opt.resizeh = parseInt(opt.resizeh || default_opt.resizeh)
+
+const resize = async (image) => {
+  if (!image) return image
+  if (!opt.resizeh) return image
+  try {
+    image = await sharp(Buffer.from(image, 'base64'))
+      .resize(opt.resizeh)
+      .jpeg({ mozjpeg: true })
+      .toBuffer()
+    image = image.toString('base64')
+    return image
+  } catch (e) {
+    console.log(e)
+  }
+}
 
 const newbot = () => {
   const bot = createClient(opt['username'], { platform: opt.platform })
@@ -68,6 +88,7 @@ const serve = (bot) => {
         message.push(body['info'])
       }
       if (body['image']) {
+        body['image'] = (await resize(body['image'])) || ''
         message.push(segment.image('base64://' + body['image']))
       }
       for (let i = 0; i < opt['maxtry']; ++i) {

@@ -44,6 +44,21 @@ const resize = async (image) => {
 
 const newbot = () => {
   const bot = createClient(opt['username'], { platform: opt.platform })
+  bot.on('request.friend', (e) => {
+    e.approve()
+  })
+  bot.on('request.friend.add', (e) => {
+    e.approve()
+  })
+  bot.on('request.friend.single', (e) => {
+    e.approve()
+  })
+  bot.on('request.group.add', (e) => {
+    e.approve()
+  })
+  bot.on('request.group.invite', (e) => {
+    e.approve()
+  })
   bot.on('system.login.slider', () => {
     process.stdin.once('data', (input) => {
       bot.sliderLogin(input)
@@ -55,6 +70,14 @@ const newbot = () => {
       bot.login()
     })
   })
+  bot
+    .on('system.login.qrcode', function (e) {
+      bot.logger.info('验证完成后敲击Enter继续..')
+      process.stdin.once('data', () => {
+        this.login()
+      })
+    })
+    .login()
   bot.on('system.offline', () => {
     // bot.login(opt['password'])
   })
@@ -68,7 +91,8 @@ const online = async (bot) => {
   })
 }
 
-const serve = (bot) => {
+const serve = async (bot) => {
+  await online(bot)
   const server = http.createServer(async (req, res) => {
     res.end()
     if (req.method != 'POST') return
@@ -82,7 +106,7 @@ const serve = (bot) => {
     })
     req.on('end', async () => {
       body = qs.parse(body)
-      if (body['to'] < 5 || (!body['info'] && !body['image'])) return
+      if (body['to'] < 5 || !parseInt(body['to']) || (!body['info'] && !body['image'])) return
       const message = []
       if (body['info']) {
         message.push(body['info'])
@@ -94,7 +118,12 @@ const serve = (bot) => {
       for (let i = 0; i < opt['maxtry']; ++i) {
         try {
           await online(bot)
-          await bot.sendPrivateMsg(body['to'], message)
+          if (bot.gl.has(parseInt(body['to']))) {
+            await bot.pickGroup(body['to']).sendMsg(message)
+          } else {
+            await bot.pickUser(body['to']).sendMsg(message)
+          }
+          // await bot.sendPrivateMsg(body['to'], message)
           break
         } catch (e) {
           console.log(e, body['to'])

@@ -38,7 +38,7 @@ captureqqimagedeliver = function(info, to)
   }
   httpPost(req)
 end
-captureqqimagedeliver("剩余理智27", 2367739198)
+captureqqimagedeliver("剩余理智27", 123456)
 ```
 
 以懒人精灵为例

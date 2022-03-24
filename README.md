@@ -77,5 +77,5 @@ end
 
 - 邮件：用户难以查看历史推送，难以设置免打扰。
 - 微信公众号（喵提醒）：用户需定时向公众号发消息。
-- [wecomchan](https://github.com/easychen/wecomchan)：未企业认证群人数上限200。
+- [wecomchan](https://github.com/easychen/wecomchan)：非企业认证群人数上限200。
 

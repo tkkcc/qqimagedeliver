@@ -106,7 +106,12 @@ const serve = async (bot) => {
     })
     req.on('end', async () => {
       body = qs.parse(body)
-      if (body['to'] < 5 || !parseInt(body['to']) || (!body['info'] && !body['image'])) return
+      if (
+        body['to'] < 5 ||
+        !parseInt(body['to']) ||
+        (!body['info'] && !body['image'])
+      )
+        return
       const message = []
       if (body['info']) {
         message.push(body['info'])
@@ -120,7 +125,7 @@ const serve = async (bot) => {
           await online(bot)
           if (bot.gl.has(parseInt(body['to']))) {
             await bot.pickGroup(body['to']).sendMsg(message)
-          } else {
+          } else if (bot.fl.has(parseInt(body['to']))) {
             await bot.pickUser(body['to']).sendMsg(message)
           }
           // await bot.sendPrivateMsg(body['to'], message)

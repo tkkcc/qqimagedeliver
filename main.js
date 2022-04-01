@@ -13,7 +13,7 @@ const default_opt = {
   resizeh: 0,
 }
 const opt = require('minimist')(process.argv.slice(2))
-if (opt.help || !opt.username || !opt.password) {
+if (opt.help) {
   const exe = 'qqimagedeliver'
   console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] \
 [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] \
@@ -42,21 +42,11 @@ const resize = async (image) => {
   }
 }
 
-const newbot = () => {
-  const bot = createClient(opt['username'], { platform: opt.platform })
-  bot.on('request.friend', (e) => {
-    e.approve()
-  })
-  bot.on('request.friend.add', (e) => {
-    e.approve()
-  })
-  bot.on('request.friend.single', (e) => {
-    e.approve()
-  })
-  bot.on('request.group.add', (e) => {
-    e.approve()
-  })
-  bot.on('request.group.invite', (e) => {
+const newbot = (username, password) => {
+  // console.log('username', username)
+  // console.log('password', password)
+  const bot = createClient(username, { platform: opt.platform })
+  bot.on('request', (e) => {
     e.approve()
   })
   bot.on('system.login.slider', () => {
@@ -78,21 +68,36 @@ const newbot = () => {
       })
     })
     .login()
-  bot.on('system.offline', () => {
+  bot.on('system.login.error', (e) => {
+    console.log(username, 'system.login.error', e)
+    if (e.message.includes('冻结')) {
+      bot.isFrozened = true
+      console.log(username, '冻结')
+    }
     // bot.login(opt['password'])
   })
+  bot.on('notice', (e) => {
+    console.log(e)
+  })
+  bot.online = async () => {
+    if (bot.isFrozened || bot.isOnline()) return bot
+    bot.login(password)
+    return new Promise((resolve) => {
+      bot.on('system.online', () => resolve(bot))
+      bot.on('system.login.error', () => resolve(bot))
+    })
+  }
+  bot.isFrozened = false
   return bot
 }
-const online = async (bot) => {
-  if (bot.isOnline()) return bot
-  bot.login(opt['password'])
-  return new Promise((resolve) => {
-    bot.on('system.online', () => resolve(bot))
-  })
-}
 
-const serve = async (bot) => {
-  await online(bot)
+const serve = async (bots) => {
+  // for (let bot of bots) {
+  //   await bot.online()
+  // }
+  await Promise.all(bots.map(async (bot) => await bot.online()))
+  console.log("login finish")
+
   const server = http.createServer(async (req, res) => {
     res.end()
     if (req.method != 'POST') return
@@ -106,6 +111,7 @@ const serve = async (bot) => {
     })
     req.on('end', async () => {
       body = qs.parse(body)
+      // console.log('body', body)
       if (
         body['to'] < 5 ||
         !parseInt(body['to']) ||
@@ -120,24 +126,39 @@ const serve = async (bot) => {
         body['image'] = (await resize(body['image'])) || ''
         message.push(segment.image('base64://' + body['image']))
       }
+      console.log(body['to'], body['info'])
       for (let i = 0; i < opt['maxtry']; ++i) {
         try {
-          await online(bot)
-          if (bot.gl.has(parseInt(body['to']))) {
-            await bot.pickGroup(body['to']).sendMsg(message)
-          } else if (bot.fl.has(parseInt(body['to']))) {
-            await bot.pickUser(body['to']).sendMsg(message)
+          let success = false
+          for (let bot of bots) {
+            await bot.online()
+            if (bot.isFrozened) continue
+            if (bot.gl.has(parseInt(body['to']))) {
+              await bot.pickGroup(body['to']).sendMsg(message)
+              success = true
+            } else if (bot.fl.has(parseInt(body['to']))) {
+              await bot.pickFriend(body['to']).sendMsg(message)
+              success = true
+            }
+            if (success) break
           }
-          // await bot.sendPrivateMsg(body['to'], message)
-          break
+          if (success) break
         } catch (e) {
-          console.log(e, body['to'])
+          console.log('retry fail', i, body['to'], e)
         }
-        await new Promise((r) => setTimeout(r, 10000))
+        await new Promise((r) => setTimeout(r, 60000))
       }
     })
   })
   server.listen({ port: opt['port'], host: opt['host'] })
 }
-
-serve(newbot())
+console.log(opt.username)
+const usernames = opt.username.toString().split(/[\s]+/)
+const passwords = opt.password.toString().split(/[\s]+/)
+if (usernames.length != passwords.length) {
+  console.log('length of username is not equal with password')
+  process.exit(1)
+}
+const zip = (a, b) => a.map((k, i) => [k, b[i]])
+const bots = zip(usernames, passwords).map(([u, p]) => newbot(u, p))
+serve(bots)

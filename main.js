@@ -162,9 +162,8 @@ const serve = async (bots) => {
   })
   server.listen({ port: opt['port'], host: opt['host'] })
 }
-console.log(opt.username)
-const usernames = opt.username.toString().split(/[\s]+/)
-const passwords = opt.password.toString().split(/[\s]+/)
+const usernames = (opt.username || '').toString().split(/[\s]+/)
+const passwords = (opt.password || '').toString().split(/[\s]+/)
 if (usernames.length != passwords.length) {
   console.log('length of username is not equal with password')
   process.exit(1)

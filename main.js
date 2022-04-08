@@ -41,6 +41,16 @@ const resize = async (image) => {
     console.log(e)
   }
 }
+const randomChoice = (choice) =>
+  choice[Math.floor(Math.random() * choice.length)]
+const shuffleArray = (array) => {
+  array = [...array]
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[array[i], array[j]] = [array[j], array[i]]
+  }
+  return array
+}
 
 const newbot = (username, password) => {
   // console.log('username', username)
@@ -96,7 +106,7 @@ const serve = async (bots) => {
   //   await bot.online()
   // }
   await Promise.all(bots.map(async (bot) => await bot.online()))
-  console.log("login finish")
+  console.log('login finish')
 
   const server = http.createServer(async (req, res) => {
     res.end()
@@ -130,7 +140,7 @@ const serve = async (bots) => {
       for (let i = 0; i < opt['maxtry']; ++i) {
         try {
           let success = false
-          for (let bot of bots) {
+          for (let bot of shuffleArray(bots)) {
             await bot.online()
             if (bot.isFrozened) continue
             if (bot.gl.has(parseInt(body['to']))) {

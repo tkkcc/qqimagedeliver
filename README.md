@@ -19,7 +19,7 @@ qqimagedeliver --username 789012 --password 5e6147aa5f # 密码登录（明文�
 
 # 多个QQ号分流，按随机顺序检索是否存在目标好友或群，然后发送
 # 使用前应先确保每个号的登录过程无需校验
-qqimagedeliver --username '789012 1234464 2234143433' --password '5e6147aa5f abce ddeeee' --maxtry=2
+qqimagedeliver --username '789012 1234464 2234143433' --password '5e6147aa5f abce ddeeee' --maxtry=2 --loglevel=warn
 
 # 用pm2管理
 npm i -g pm2

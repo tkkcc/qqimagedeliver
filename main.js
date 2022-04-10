@@ -11,11 +11,13 @@ const default_opt = {
   maxtry: 1,
   platform: 1,
   resizeh: 0,
+  loglevel: 'info',
 }
 const opt = require('minimist')(process.argv.slice(2))
 if (opt.help) {
   const exe = 'qqimagedeliver'
-  console.log(`${exe} [--username ''] [--password ''] [--platform ${default_opt.platform}] \
+  console.log(`${exe} [--username ''] [--password ''] \
+[--platform ${default_opt.platform}] [--loglevel ${default_opt.loglevel}] \
 [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] \
 [--maxtry ${default_opt.maxtry}] [--resizeh ${default_opt.resizeh}]
 ${exe} --username 789012 --password 5e6147aa5f # crypto your password by 'echo -n realpassword|md5sum'`)
@@ -55,7 +57,10 @@ const shuffleArray = (array) => {
 const newbot = (username, password) => {
   // console.log('username', username)
   // console.log('password', password)
-  const bot = createClient(username, { platform: opt.platform })
+  const bot = createClient(username, {
+    platform: opt.platform,
+    log_level: opt.loglevel,
+  })
   bot.on('request', (e) => {
     e.approve()
   })

@@ -1,6 +1,6 @@
 {
   "name": "qqimagedeliver",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "QQ图片分发：基于QQ机器人的面向手游辅助脚本的推送服务",
   "homepage": "https://github.com/tkkcc/qqimagedeliver",
   "main": "main.js",

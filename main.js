@@ -78,11 +78,14 @@ const newbot = (username, password) => {
       })
     })
     .login()
-  bot.on('system.login.error', (e) => {
+  bot.on('system.login.error', async (e) => {
     console.log(username, 'system.login.error', e)
-    if (e.message.includes('冻结')) {
+    if (e.message.includes('冻结') && !bot.isFrozened) {
       bot.isFrozened = true
-      console.log(username, '冻结')
+      console.log(username, '冻结，8小时后重试')
+      // 每8小时重试登录
+      await new Promise((r) => setTimeout(r, 8 * 3600 * 1000))
+      bot.isFrozened = false
     }
     // bot.login(opt['password'])
   })
@@ -156,7 +159,7 @@ const serve = async (bots) => {
         } catch (e) {
           console.log('retry fail', i, body['to'], e)
         }
-        await new Promise((r) => setTimeout(r, 60000))
+        await new Promise((r) => setTimeout(r, 60 * 1000))
       }
     })
   })

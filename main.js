@@ -28,7 +28,7 @@ opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
 opt.maxtry = parseInt(opt.maxtry || default_opt.maxtry)
 opt.platform = parseInt(opt.platform || default_opt.platform)
 opt.resizeh = parseInt(opt.resizeh || default_opt.resizeh)
-opt.loglevel = parseInt(opt.loglevel || default_opt.loglevel)
+opt.loglevel = opt.loglevel || default_opt.loglevel
 
 const resize = async (image) => {
   if (!image) return image

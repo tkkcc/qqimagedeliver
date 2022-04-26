@@ -14,7 +14,7 @@ const default_opt = {
   loglevel: 'info',
 }
 const opt = require('minimist')(process.argv.slice(2))
-if (opt.help) {
+if (opt.help|opt.h) {
   const exe = 'qqimagedeliver'
   console.log(`${exe} [--username ''] [--password ''] \
 [--platform ${default_opt.platform}] [--loglevel ${default_opt.loglevel}] \

@@ -3,14 +3,12 @@ const { createClient, segment } = require('oicq')
 const path = require('path')
 const http = require('http')
 const qs = require('querystring')
-const sharp = require('sharp')
 
 const default_opt = {
   port: 49875,
   maxsize: 10000000, // 10M
   maxtry: 1,
   platform: 1,
-  resizeh: 0,
   loglevel: 'info',
 }
 const opt = require('minimist')(process.argv.slice(2))
@@ -19,33 +17,20 @@ if (opt.help|opt.h) {
   console.log(`${exe} [--username ''] [--password ''] \
 [--platform ${default_opt.platform}] [--loglevel ${default_opt.loglevel}] \
 [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] \
-[--maxtry ${default_opt.maxtry}] [--resizeh ${default_opt.resizeh}]
-${exe} --username 789012 --password 5e6147aa5f # crypto your password by 'echo -n realpassword|md5sum'`)
+[--maxtry ${default_opt.maxtry}]
+${exe} --username 12345 --password abcde`)
   process.exit(1)
 }
 opt.port = parseInt(opt.port || default_opt.port)
 opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
 opt.maxtry = parseInt(opt.maxtry || default_opt.maxtry)
 opt.platform = parseInt(opt.platform || default_opt.platform)
-opt.resizeh = parseInt(opt.resizeh || default_opt.resizeh)
 opt.loglevel = opt.loglevel || default_opt.loglevel
 
-const resize = async (image) => {
-  if (!image) return image
-  if (!opt.resizeh) return image
-  try {
-    image = await sharp(Buffer.from(image, 'base64'))
-      .resize(opt.resizeh)
-      .jpeg({ mozjpeg: true })
-      .toBuffer()
-    image = image.toString('base64')
-    return image
-  } catch (e) {
-    console.log(e)
-  }
-}
+
 const randomChoice = (choice) =>
   choice[Math.floor(Math.random() * choice.length)]
+
 const shuffleArray = (array) => {
   array = [...array]
   for (let i = array.length - 1; i > 0; i--) {
@@ -142,7 +127,6 @@ const serve = async (bots) => {
         message.push(body['info'])
       }
       if (body['image']) {
-        body['image'] = (await resize(body['image'])) || ''
         message.push(segment.image('base64://' + body['image']))
       }
       console.log(body['to'], body['info'])

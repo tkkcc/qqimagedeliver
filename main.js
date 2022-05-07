@@ -10,14 +10,17 @@ const default_opt = {
   maxtry: 1,
   platform: 1,
   loglevel: 'info',
+  send_msg_timeout: 10000,
+  send_msg_interval: 10000,
 }
 const opt = require('minimist')(process.argv.slice(2))
-if (opt.help|opt.h) {
+if (opt.help | opt.h) {
   const exe = 'qqimagedeliver'
   console.log(`${exe} [--username ''] [--password ''] \
 [--platform ${default_opt.platform}] [--loglevel ${default_opt.loglevel}] \
 [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] \
-[--maxtry ${default_opt.maxtry}]
+[--maxtry ${default_opt.maxtry}] [--send-msg-timeout ${default_opt.send_msg_timeout}] \
+[--send-msg-interval ${default_opt.send_msg_interval}]
 ${exe} --username 12345 --password abcde`)
   process.exit(1)
 }
@@ -26,7 +29,8 @@ opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
 opt.maxtry = parseInt(opt.maxtry || default_opt.maxtry)
 opt.platform = parseInt(opt.platform || default_opt.platform)
 opt.loglevel = opt.loglevel || default_opt.loglevel
-
+opt.send_msg_timeout = parseInt(opt['send-msg-timeout'] || default_opt.send_msg_timeout)
+opt.send_msg_interval = parseInt(opt['send-msg-interval'] || default_opt.send_msg_interval)
 
 const randomChoice = (choice) =>
   choice[Math.floor(Math.random() * choice.length)]
@@ -61,14 +65,12 @@ const newbot = (username, password) => {
       bot.login()
     })
   })
-  bot
-    .on('system.login.qrcode', function (e) {
-      bot.logger.info('验证完成后敲击Enter继续..')
-      process.stdin.once('data', () => {
-        this.login()
-      })
+  bot.on('system.login.qrcode', function (e) {
+    bot.logger.info('验证完成后敲击Enter继续..')
+    process.stdin.once('data', () => {
+      this.login()
     })
-    .login()
+  })
   bot.on('system.login.error', async (e) => {
     console.log(username, 'system.login.error', e)
     if (e.message.includes('冻结') && !bot.isFrozened) {
@@ -80,9 +82,13 @@ const newbot = (username, password) => {
     }
     // bot.login(opt['password'])
   })
-  bot.on('notice', (e) => {
+  bot.on('system.offline', (e) => {
     console.log(e)
+    bot.online()
   })
+  // bot.on('notice', (e) => {
+  //   console.log(e)
+  // })
   bot.online = async () => {
     if (bot.isFrozened || bot.isOnline()) return bot
     bot.login(password)
@@ -101,6 +107,31 @@ const serve = async (bots) => {
   // }
   await Promise.all(bots.map(async (bot) => await bot.online()))
   console.log('login finish')
+  // console.log('bots[0]', bots[0].uin)
+
+  const PQueue = (await import('p-queue')).default
+  const bot2queue = {}
+  console.log("send_msg_interval", opt.send_msg_interval)
+  console.log("send_msg_timeout", opt.send_msg_timeout)
+
+  bots.forEach((bot) => {
+    bot2queue[bot.uin] = new PQueue({
+      concurrency: 1,
+      timeout: opt.send_msg_timeout,
+      interval: opt.send_msg_interval,
+      intervalCap: 1,
+    })
+  })
+
+  // const bot2queue = bots.reduce(
+  //   (all, bot) =>
+  //     (all[bot.uin] = new PQueue({
+  //       concurrency: 1,
+  //       timeout: 30,
+  //       interval: 10,
+  //     })),
+  //   {}
+  // )
 
   const server = http.createServer(async (req, res) => {
     res.end()
@@ -129,18 +160,24 @@ const serve = async (bots) => {
       if (body['image']) {
         message.push(segment.image('base64://' + body['image']))
       }
-      console.log(body['to'], body['info'])
+      console.log('receive', body['to'], body['info'])
+
       for (let i = 0; i < opt['maxtry']; ++i) {
         try {
           let success = false
           for (let bot of shuffleArray(bots)) {
-            await bot.online()
-            if (bot.isFrozened) continue
+            if (bot.isFrozened || !bot.isOnline()) continue
             if (bot.gl.has(parseInt(body['to']))) {
-              await bot.pickGroup(body['to']).sendMsg(message)
+              await bot2queue[bot.uin].add(async () => {
+                bot.pickGroup(body['to']).sendMsg(message)
+                console.log('send', body['to'], body['info'])
+              })
               success = true
             } else if (bot.fl.has(parseInt(body['to']))) {
-              await bot.pickFriend(body['to']).sendMsg(message)
+              await bot2queue[bot.uin].add(() => {
+                bot.pickFriend(body['to']).sendMsg(message)
+                console.log('send', body['to'], body['info'])
+              })
               success = true
             }
             if (success) break

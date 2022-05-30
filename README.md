@@ -1,87 +1,81 @@
 # QQ图像分发
 
-面向手游辅助脚本的QQ机器人推送服务
-
-- 前期准备：用户在辅助界面中输入用户QQ，用户点击按钮添加QQ机器人为好友。
-- 运行流程：辅助运行结束后截屏 -> 辅助发送图像与用户QQ给服务端 -> 服务端QQ机器人发送图像给用户QQ
-
-https://user-images.githubusercontent.com/17373509/135971168-62f45b77-c83c-4e85-a8d3-bc9e0804d530.mp4
-
 [明日方舟速通](https://github.com/tkkcc/arknights)
 
-## 安装服务端
+## 服务端安装
+
+需要nodejs环境，安卓平台可在termux内安装。
 
 ```sh
+# 安装
 npm i -g qqimagedeliver
 qqimagedeliver --help
-qqimagedeliver --username 789012 # 扫码登录
-qqimagedeliver --username 789012 --password 5e6147aa5f # 密码登录（明文或md5加密结果）
+qqimagedeliver --username 12345 # 扫码登录
+qqimagedeliver --username 12345 --password 67890 # 密码登录（明文或md5加密结果）
 
 # 多个QQ号分流，按随机顺序检索是否存在目标好友或群，然后发送
 # 使用前应先确保每个号的登录过程无需校验
-qqimagedeliver --username '789012 1234464 2234143433' --password '5e6147aa5f abce ddeeee' --maxtry=2 --loglevel=warn
+qqimagedeliver --username '12345 23451 34512' --password '67890 78906 89067' --maxtry=2 --loglevel=warn
 
 # 用pm2管理
 npm i -g pm2
-pm2 start qqimagedeliver -- --username 789012 --password 5e6147aa5f
+pm2 start qqimagedeliver -- --username 12345 --password 67890
 pm2 log
 ```
 
-## 辅助发送图像与用户QQ给服务端
+## 客户端
 
-以节点精灵为例
-
-```lua
-captureqqimagedeliver = function(info, to)
-  io.open(getDir() .. '/.nomedia', 'w')
-  local img = getDir() .. "/tmp.jpg"
-  capture(img, 30)
-  local req = {
-    url = "http://a1.bilabila.tk:49875",
-    param = {image = base64(img), info = tostring(info), to = tostring(to)},
-    timeout = 20,
-  }
-  httpPost(req)
-end
-captureqqimagedeliver("剩余理智27", 123456)
+post数据格式
+```js
+{
+  image, // base64编码图片
+  to, // 接收QQ号或群号
+  info, // 文字信息
+} 
 ```
 
-以懒人精灵为例
-```lua
-captureqqimagedeliver = function(info, to)
-  if not to then return end
-  io.open(getWorkPath() .. '/.nomedia', 'w')
-  local img = getWorkPath() .. "/tmp.jpg"
-  snapShot(img)
-  notifyqq(base64(img), tostring(info), tostring(to))
-end
-notifyqq = function(image, info, to, sync)
-  image = image or ''
-  info = info or ''
-  to = to or ''
-  local param = "image=" .. encodeUrl(image) .. "&info=" .. encodeUrl(info) ..
-                  "&to=" .. encodeUrl(to)
-  log('notify qq', info, to)
-  if #to < 5 then return end
-
-  local id = lock:add()
-  asynHttpPost(function(res, code)
-    -- log("notifyqq response", res, code)
-    lock:remove(id)
-  end, "http://82.156.198.12:49875", param)
-  if sync then wait(function() return not lock:exist(id) end, 30) end
-end
+curl
+```sh
+curl -d "info=好的&to=12345" http://123.456.789.100.49875
 ```
 
-## 问题
+python
+```python
+requests.post(
+    "http://123.456.789.100:49875",
+    data={"to": to, "info": info, "image": image}
+)
+```
 
-- 冻结：多号分流。
-- 发图失败：每日发图有上限，让用户创建群聊并邀请机器人进群，脚本上填群号。
-- [异地登录后几天内自动下线](https://github.com/takayama-lily/oicq/issues/212)，需配合pm2等工具使用。
+懒人精灵
+```lua
+local param = "image=" .. encodeUrl(image) .. "&info=" .. encodeUrl(info)
+                "&to=" .. encodeUrl(to)
+asynHttpPost(function(res, code)
+  print(code)
+end, "http://123.456.789.100:49875", param)
+```
+
+节点精灵
+```lua
+local req = {
+  url = "http://123.456.789.100:49875",
+  param = {image = base64(img), info = info, to = to},
+  timeout = 30,
+}
+httpPost(req)
+```
+
+## 常见问题
+
+- 账号冻结：少加群加好友、少发长数字串、多号分流。
+- 有字没图：每日私聊发图量有上限，用群号。
+- [异地登录后几天内自动下线](https://github.com/takayama-lily/oicq/issues/212)：pm2自动重启。
 
 ## 其它推送方式
 
-- 邮件：用户难以查看历史推送，难以设置免打扰。
-- 微信公众号（喵提醒）：用户需定时向公众号发消息。
-- [wecomchan](https://github.com/easychen/wecomchan)：非企业认证群人数上限200。
-
+- 邮件：用户难以查看历史推送，图片消息是折叠的。
+- 喵提醒：用户需定期向公众号发消息，图片消息是折叠的。
+- pushplus：需要另找图床，公众号图片消息是折叠的。
+- QQ频道：官方机器人主动消息数量上限极低。
+- [wecomchan](https://github.com/easychen/wecomchan)：非企业认证群人数上限200，个人使用不错。

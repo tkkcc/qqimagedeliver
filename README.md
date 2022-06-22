@@ -36,7 +36,7 @@ post数据格式
 
 curl
 ```sh
-curl -d "info=好的&to=12345" http://123.456.789.100.49875
+curl -d "info=好的&to=12345" http://123.456.789.100:49875
 ```
 
 python

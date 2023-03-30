@@ -1,6 +1,8 @@
 # QQ图像分发
 
-[明日方舟速通](https://github.com/tkkcc/arknights)
+QQ消息转发服务，用于[明日方舟速通](https://github.com/tkkcc/arknights)
+
+[登录问题](https://github.com/tkkcc/qqimagedeliver/issues/2)
 
 ## 服务端安装
 

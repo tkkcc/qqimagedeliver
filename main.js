@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { createClient, segment } = require('icqq')
+const { createClient, segment } = require('oicq')
 const path = require('path')
 const http = require('http')
 const qs = require('querystring')
@@ -8,7 +8,7 @@ const default_opt = {
   port: 49875,
   maxsize: 10000000, // 10M
   maxtry: 1,
-  platform: 3, // watch
+  platform: 3, // 手表扫码
   loglevel: 'info',
   send_msg_timeout: 10000,
   send_msg_interval: 10000,
@@ -21,7 +21,6 @@ if (opt.help | opt.h) {
 [--host ''] [--port ${default_opt.port}] [--maxsize ${default_opt.maxsize}] \
 [--maxtry ${default_opt.maxtry}] [--send-msg-timeout ${default_opt.send_msg_timeout}] \
 [--send-msg-interval ${default_opt.send_msg_interval}]
-[--remove-long-number]
 ${exe} --username 12345 --password abcde`)
   process.exit(1)
 }
@@ -30,13 +29,8 @@ opt.maxsize = parseInt(opt.maxsize || default_opt.maxsize)
 opt.maxtry = parseInt(opt.maxtry || default_opt.maxtry)
 opt.platform = parseInt(opt.platform || default_opt.platform)
 opt.loglevel = opt.loglevel || default_opt.loglevel
-opt.send_msg_timeout = parseInt(
-  opt['send-msg-timeout'] || default_opt.send_msg_timeout
-)
-opt.send_msg_interval = parseInt(
-  opt['send-msg-interval'] || default_opt.send_msg_interval
-)
-opt.remove_long_number = opt['remove-long-number'] || false
+opt.send_msg_timeout = parseInt(opt['send-msg-timeout'] || default_opt.send_msg_timeout)
+opt.send_msg_interval = parseInt(opt['send-msg-interval'] || default_opt.send_msg_interval)
 
 const randomChoice = (choice) =>
   choice[Math.floor(Math.random() * choice.length)]
@@ -51,40 +45,30 @@ const shuffleArray = (array) => {
 }
 
 const newbot = (username, password) => {
-  const bot = createClient({
+  // console.log('username', username)
+  // console.log('password', password)
+  const bot = createClient(username, {
     platform: opt.platform,
     log_level: opt.loglevel,
   })
   bot.on('request', (e) => {
     e.approve()
   })
-  bot.on('system.login.slider', (e) => {
-    console.log('输入滑块地址获取的ticket后继续。\n滑块地址:    ' + e.url)
-    process.stdin.once('data', (data) => {
-      bot.submitSlider(data.toString().trim())
+  bot.on('system.login.slider', () => {
+    process.stdin.once('data', (input) => {
+      bot.sliderLogin(input)
     })
   })
-  bot.on('system.login.qrcode', (e) => {
-    console.log('扫码完成后回车继续:    ')
+  bot.on('system.login.device', () => {
+    bot.logger.info('验证完成后敲击Enter继续..')
     process.stdin.once('data', () => {
       bot.login()
     })
   })
-  bot.on('system.login.device', (e) => {
-    console.log('请选择验证方式:(1：短信验证   其他：扫码验证)')
-    process.stdin.once('data', (data) => {
-      if (data.toString().trim() === '1') {
-        bot.sendSmsCode()
-        console.log('请输入手机收到的短信验证码:')
-        process.stdin.once('data', (res) => {
-          bot.submitSmsCode(res.toString().trim())
-        })
-      } else {
-        console.log('扫码完成后回车继续：' + e.url)
-        process.stdin.once('data', () => {
-          bot.login()
-        })
-      }
+  bot.on('system.login.qrcode', function (e) {
+    bot.logger.info('验证完成后敲击Enter继续..')
+    process.stdin.once('data', () => {
+      this.login()
     })
   })
   bot.on('system.login.error', async (e) => {
@@ -96,14 +80,18 @@ const newbot = (username, password) => {
       await new Promise((r) => setTimeout(r, 8 * 3600 * 1000))
       bot.isFrozened = false
     }
+    // bot.login(opt['password'])
   })
   bot.on('system.offline', (e) => {
     console.log(e)
     bot.online()
   })
+  // bot.on('notice', (e) => {
+  //   console.log(e)
+  // })
   bot.online = async () => {
     if (bot.isFrozened || bot.isOnline()) return bot
-    bot.login(username, password)
+    bot.login(password)
     return new Promise((resolve) => {
       bot.on('system.online', () => resolve(bot))
       bot.on('system.login.error', () => resolve(bot))
@@ -123,8 +111,8 @@ const serve = async (bots) => {
 
   const PQueue = (await import('p-queue')).default
   const bot2queue = {}
-  // console.log('send_msg_interval', opt.send_msg_interval)
-  // console.log('send_msg_timeout', opt.send_msg_timeout)
+  console.log("send_msg_interval", opt.send_msg_interval)
+  console.log("send_msg_timeout", opt.send_msg_timeout)
 
   bots.forEach((bot) => {
     bot2queue[bot.uin] = new PQueue({
@@ -167,11 +155,7 @@ const serve = async (bots) => {
         return
       const message = []
       if (body['info']) {
-        if (opt.remove_long_number) {
-          message.push(body['info'].replace(/\d{4}\d*\.*/g, ''))
-        } else {
-          message.push(body['info'])
-        }
+        message.push(body['info'])
       }
       if (body['image']) {
         message.push(segment.image('base64://' + body['image']))
